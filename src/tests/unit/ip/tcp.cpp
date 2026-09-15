@@ -690,6 +690,21 @@ void test()
   ioc.restart();
   ioc.run();
   ASIO_CHECK(read_eof_completed);
+
+#ifndef ASIO_HAS_IO_URING
+  // Registering an invalid native handle should fail.
+  //
+  // NOTE: Not applicable to io_uring since descriptors do not need to be
+  // registered to be submitted.
+
+  ip::tcp::socket bad_socket(ioc);
+  ip::tcp::socket::native_handle_type invalid_handle
+    = static_cast<ip::tcp::socket::native_handle_type>(-1);
+  asio::error_code assign_ec;
+  bad_socket.assign(ip::tcp::v4(), invalid_handle, assign_ec);
+  ASIO_CHECK(assign_ec);
+  ASIO_CHECK(!bad_socket.is_open());
+#endif // ASIO_HAS_IO_URING
 }
 
 } // namespace ip_tcp_socket_runtime

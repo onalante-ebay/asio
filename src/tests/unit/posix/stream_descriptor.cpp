@@ -183,8 +183,53 @@ void test()
 
 //------------------------------------------------------------------------------
 
+// posix_stream_descriptor_runtime test
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// The following test checks that assigning an invalid native descriptor fails
+// synchronously, rather than succeeding and later hanging on a wait operation.
+//
+// NOTE: Not applicable to io_uring since descriptors do not need to be
+// registered to be submitted.
+
+namespace posix_stream_descriptor_runtime {
+
+void test()
+{
+#if defined(ASIO_HAS_POSIX_STREAM_DESCRIPTOR) && !defined(ASIO_HAS_IO_URING)
+  using namespace asio;
+  namespace posix = asio::posix;
+
+  io_context ioc;
+  int invalid_descriptor = -1;
+
+  posix::stream_descriptor descriptor1(ioc);
+  asio::error_code ec;
+  descriptor1.assign(invalid_descriptor, ec);
+  ASIO_CHECK(ec);
+  ASIO_CHECK(!descriptor1.is_open());
+
+  posix::stream_descriptor descriptor2(ioc);
+  bool caught = false;
+  try
+  {
+    descriptor2.assign(invalid_descriptor);
+  }
+  catch (const asio::system_error&)
+  {
+    caught = true;
+  }
+  ASIO_CHECK(caught);
+  ASIO_CHECK(!descriptor2.is_open());
+#endif // defined(ASIO_HAS_POSIX_STREAM_DESCRIPTOR) && !defined(ASIO_HAS_IO_URING)
+}
+
+} // namespace posix_stream_descriptor_runtime
+
+//------------------------------------------------------------------------------
+
 ASIO_TEST_SUITE
 (
   "posix/stream_descriptor",
   ASIO_COMPILE_TEST_CASE(posix_stream_descriptor_compile::test)
+  ASIO_TEST_CASE(posix_stream_descriptor_runtime::test)
 )
