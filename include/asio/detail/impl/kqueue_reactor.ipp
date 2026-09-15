@@ -149,6 +149,13 @@ void kqueue_reactor::init_task()
 int kqueue_reactor::register_descriptor(socket_type descriptor,
     kqueue_reactor::per_descriptor_data& descriptor_data)
 {
+  // NOTE: `descriptor` is user-provided, so ensure it is valid before
+  // proceeding.  Without this, the action of `register_descriptor` on an
+  // invalid handle always succeeds, inconsistent with the behavior of the epoll
+  // and IOCP backends.
+  if (::fcntl(descriptor, F_GETFD) == -1)
+    return errno;
+
   descriptor_data = allocate_descriptor_state();
 
   ASIO_HANDLER_REACTOR_REGISTRATION((
